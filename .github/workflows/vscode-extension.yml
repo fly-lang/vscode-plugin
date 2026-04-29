@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  EXTENSION_DIR: vscode
+  EXTENSION_DIR: .
 
 jobs:
 
