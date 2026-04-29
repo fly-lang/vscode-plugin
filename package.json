@@ -1,9 +1,9 @@
 {
-  "name": "vscode-fly",
-  "displayName": "Fly Language",
-  "description": "Syntax highlighting, bracket matching, and snippets for the Fly programming language",
+  "name": "fly-vscode-extension",
+  "displayName": "Fly Language Support",
+  "description": "Support for the Fly programming language in Visual Studio Code, including syntax highlighting and code snippets.",
   "version": "0.1.0",
-  "publisher": "fly-lang",
+  "publisher": "flylang.org",
   "icon": "fly_logo.png",
   "license": "Apache-2.0",
   "homepage": "https://flylang.org",
@@ -33,7 +33,7 @@
       {
         "id": "fly",
         "aliases": ["Fly", "fly"],
-        "extensions": [".fly", ".f"],
+        "extensions": [".fly", ".fly.h"],
         "configuration": "./language-configuration.json",
         "icon": {
           "light": "./icons/fly-light.svg",
