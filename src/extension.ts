@@ -15,15 +15,10 @@ import { ManifestHoverProvider }        from './project/hover';
 import { ManifestDiagnosticsProvider }  from './project/diagnostics';
 import { ManifestCodeLensProvider }     from './project/codeLens';
 import { ManifestDocumentLinkProvider } from './project/documentLink';
+// Pure arg/path logic lives in core/toolchain (unit-tested without vscode).
+import { singleFileArgs } from './core/toolchain';
 
 const FLY_SELECTOR: vscode.DocumentSelector = { language: 'fly', scheme: 'file' };
-
-// The driver takes no positional file arguments: it compiles a source
-// directory. A single file builds via --entry <file> (discovery is skipped)
-// with its directory as the import root.
-function singleFileArgs(filePath: string): string[] {
-    return ['--entry', filePath, '--src-dir', path.dirname(filePath)];
-}
 
 // A manifest IS a .fly file, so it is selected by name rather than by language.
 const MANIFEST_SELECTOR: vscode.DocumentSelector = {
@@ -418,6 +413,14 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     // ── Live diagnostics via compiler JSON output ─────────────────────────
+    //
+    // FALLBACK ONLY: when the language server is enabled it is the single
+    // source of diagnostics (it compiles the project and publishes per file),
+    // and running the compiler here too would duplicate every squiggle and
+    // double the work. Same policy as vscode-go, which disables its legacy
+    // buildOnSave/vetOnSave diagnostics while gopls is active.
+    const lspActive = vscode.workspace.getConfiguration('fly').get<boolean>('enableLsp', true);
+    if (!lspActive) {
     const diagCollection = vscode.languages.createDiagnosticCollection('fly');
     context.subscriptions.push(diagCollection);
 
@@ -481,6 +484,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         flyWatcher.onDidCreate(uri => diagProvider.runForPath(uri.fsPath)),
     );
+    }   // end of the !lspActive fallback diagnostics
 
     // ── Debug adapter: lldb-dap bundled with the Fly toolchain ────────────
     // The toolchain ships lldb-dap next to fly in bin/, so the adapter is

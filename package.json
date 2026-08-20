@@ -344,7 +344,7 @@
         "fly.enableDiagnostics": {
           "type": "boolean",
           "default": true,
-          "description": "Run the Fly compiler on save and show errors and warnings as inline diagnostics."
+          "description": "Run the Fly compiler on save and show errors and warnings as inline diagnostics. Fallback only: ignored while fly.enableLsp is on — the language server is then the single source of diagnostics."
         },
         "fly.lspPath": {
           "type": "string",
@@ -389,7 +389,7 @@
         "fly.enableWorkspaceDiagnostics": {
           "type": "boolean",
           "default": true,
-          "description": "Scan all .fly files in the workspace for errors at startup, not only files that are explicitly opened."
+          "description": "Scan all .fly files in the workspace for errors at startup, not only files that are explicitly opened. Fallback only: ignored while fly.enableLsp is on."
         }
       }
     }
@@ -400,6 +400,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
+    "test": "npm run compile && node tests/unit.js",
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "publish": "vsce publish --oidc"

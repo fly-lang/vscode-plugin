@@ -22,14 +22,9 @@ export function detectVersion(flyPath: string): Promise<string | undefined> {
     });
 }
 
-// Return the path of a tool shipped next to the fly binary (fly-lsp,
-// lldb-dap, …). A bare compilerPath ("fly") yields the bare tool name,
-// which resolves through PATH like the compiler itself.
-export function deriveSiblingTool(flyPath: string, tool: string): string {
-    const dir  = path.dirname(flyPath);
-    const name = os.platform() === 'win32' ? `${tool}.exe` : tool;
-    return dir === '.' ? name : path.join(dir, name);
-}
+// Pure path logic lives in core/toolchain (unit-tested without vscode).
+export { deriveSiblingTool } from '../core/toolchain';
+import { deriveSiblingTool } from '../core/toolchain';
 
 // Return the sibling fly-lsp path for a given fly binary path.
 export function deriveLspPath(flyPath: string): string {

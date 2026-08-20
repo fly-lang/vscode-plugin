@@ -5,6 +5,9 @@ tsconfig.json
 # Generator tooling (data/stdlib-completions.json IS packaged; its generator is not)
 scripts/
 
+# Unit tests (run by CI before packaging, not shipped)
+tests/
+
 # Build artefacts that don't belong in the package
 out/**/*.js.map
 *.vsix

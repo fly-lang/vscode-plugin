@@ -38,6 +38,9 @@ jobs:
       - name: Compile TypeScript
         run: npm run compile
 
+      - name: Unit tests (pure core modules)
+        run: node tests/unit.js
+
       - name: Read version from package.json
         id: meta
         run: |

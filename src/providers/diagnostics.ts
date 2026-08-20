@@ -16,18 +16,9 @@ interface FlyJsonOutput {
     diagnostics: FlyDiagnosticEntry[];
 }
 
-/**
- * Compilers up to 0.14.4 report the module path WITHOUT the .fly extension
- * (e.g. `C:\proj\broken` for `broken.fly`); newer ones report the real path.
- * Restore it so diagnostics attach to the open document either way.
- */
-function resolveDiagFile(reported: string | undefined, compiledFile: string): string {
-    if (!reported) return compiledFile;
-    if (fs.existsSync(reported)) return reported;
-    const withExt = reported + '.fly';
-    if (fs.existsSync(withExt)) return withExt;
-    return compiledFile;
-}
+// Pure JSON-repair and file-mapping logic lives in core/diagjson
+// (unit-tested without vscode).
+import { sanitizeCompilerJson, resolveDiagFile } from '../core/diagjson';
 
 function levelToSeverity(level: string): vscode.DiagnosticSeverity {
     switch (level) {
@@ -96,15 +87,7 @@ export class FlyDiagnosticsProvider {
                 const raw = fs.readFileSync(tmpFile, 'utf8');
                 fs.unlinkSync(tmpFile);
 
-                // Compilers up to 0.14.4 do not JSON-escape the per-diagnostic
-                // "file" paths, so Windows backslashes produce broken escapes
-                // (\U, \b…). The compiler's own escaping emits ONLY \\ and \",
-                // so keeping those atomic and doubling every other backslash
-                // repairs the old output and leaves fixed output untouched.
-                const sanitized = raw.replace(/\\\\|\\"|\\/g,
-                    m => (m === '\\' ? '\\\\' : m));
-
-                const parsed = JSON.parse(sanitized) as FlyJsonOutput;
+                const parsed = JSON.parse(sanitizeCompilerJson(raw)) as FlyJsonOutput;
                 const byFile = new Map<string, vscode.Diagnostic[]>();
 
                 for (const d of parsed.diagnostics ?? []) {
@@ -116,7 +99,7 @@ export class FlyDiagnosticsProvider {
                     const diag = new vscode.Diagnostic(range, d.message, severity);
                     diag.source = 'fly';
 
-                    const key = resolveDiagFile(d.file, filePath);
+                    const key = resolveDiagFile(d.file, filePath, fs.existsSync);
                     if (!byFile.has(key)) byFile.set(key, []);
                     byFile.get(key)!.push(diag);
                 }
