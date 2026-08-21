@@ -39,8 +39,9 @@ const FIELDS: Record<string, FieldDoc> = {
     },
     flyVersion: {
         detail: 'string flyVersion',
-        doc:    'The Fly toolchain version this package expects, e.g. `"0.14.4"`. '
-              + '`fly init` fills it in with the version that scaffolded the project.',
+        doc:    'The Fly toolchain version this package expects — the version reported '
+              + 'by `fly --version`. `fly init` fills it in with the version that '
+              + 'scaffolded the project.',
     },
     homepage: {
         detail: 'string homepage',

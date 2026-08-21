@@ -4,7 +4,7 @@
  */
 
 /**
- * Repair the JSON log of compilers up to 0.14.4, which did not JSON-escape the
+ * Repair the JSON log of older compilers, which did not JSON-escape the
  * per-diagnostic "file" paths: Windows backslashes produce broken escapes
  * (\U, \b, …). The compiler's own escaping emits ONLY \\ and \" — keep those
  * atomic and double every other backslash (a raw path separator). Idempotent
@@ -15,7 +15,7 @@ export function sanitizeCompilerJson(raw: string): string {
 }
 
 /**
- * Compilers up to 0.14.4 report the module path WITHOUT the .fly extension
+ * Older compilers report the module path WITHOUT the .fly extension
  * (e.g. `C:\proj\broken` for `broken.fly`); newer ones report the real path.
  * Restore it so diagnostics attach to the open document either way.
  * `exists` is injected so tests need no filesystem.

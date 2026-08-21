@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { detectVersion } from '../compiler/finder';
 
 /**
  * Field completions inside a project manifest.
@@ -16,8 +17,15 @@ function field(label: string, snippet: string, doc: string): vscode.CompletionIt
     return item;
 }
 
-/** Fields the driver actually reads, in the order `fly` serialises them. */
-const FIELDS: vscode.CompletionItem[] = [
+/**
+ * Fields the driver actually reads, in the order `fly` serialises them.
+ *
+ * Built per call: the flyVersion snippet defaults to the ACTIVE compiler's
+ * version (what `fly init` would write) instead of a hardcoded number that
+ * goes stale at every toolchain release; `flyVer` is "" until detected.
+ */
+function makeFields(flyVer: string): vscode.CompletionItem[] {
+    return [
     field('name',        'string name = "${1:my-project}"',
           'Package name (REQUIRED). Must match `[a-z0-9_-]+`.'),
     field('version',     'string version = "${1:0.1.0}"',
@@ -26,8 +34,8 @@ const FIELDS: vscode.CompletionItem[] = [
           'Short human-readable description.'),
     field('license',     'string license = "${1:Apache-2.0}"',
           'SPDX license identifier.'),
-    field('flyVersion',  'string flyVersion = "${1:0.14.4}"',
-          'The Fly toolchain version this package expects.'),
+    field('flyVersion',  'string flyVersion = "${1' + (flyVer ? ':' + flyVer : '') + '}"',
+          'The Fly toolchain version this package expects (the version reported by `fly --version`).'),
     field('homepage',    'string homepage = "${1:https://example.org}"',
           'Project homepage or documentation URL.'),
     field('repository',  'string repository = "${1:https://github.com/user/repo.git}"',
@@ -45,7 +53,8 @@ const FIELDS: vscode.CompletionItem[] = [
           'Runtime dependencies. Prefer `fly add`, which also re-locks.'),
     field('devDependencies', 'Dependency[] devDependencies = { new Dependency("${1:name}", "${2:^1.0.0}") }',
           'Development-only dependencies (`fly add --dev`).'),
-];
+    ];
+}
 
 /** Constructors usable inside an array literal. */
 const CONSTRUCTORS: vscode.CompletionItem[] = [
@@ -89,10 +98,27 @@ function insideBraces(line: string, col: number): boolean {
 }
 
 export class ManifestCompletionProvider implements vscode.CompletionItemProvider {
+    // Active compiler version, detected once per compilerPath value: the
+    // flyVersion snippet then offers what `fly init` would write. "" (not yet
+    // detected, or no compiler) leaves the snippet placeholder empty.
+    private flyVer = '';
+    private detectedFor = '';
+
+    private refreshVersion(): void {
+        const compiler = vscode.workspace.getConfiguration('fly')
+            .get<string>('compilerPath', 'fly');
+        if (compiler === this.detectedFor) return;
+        this.detectedFor = compiler;
+        void detectVersion(compiler).then(v => { this.flyVer = v ?? ''; });
+    }
+
     provideCompletionItems(
         document: vscode.TextDocument,
         position: vscode.Position,
     ): vscode.CompletionItem[] {
+        // Fire-and-forget: the first request may miss the version (snippet
+        // placeholder stays empty); later ones use the cached detection.
+        this.refreshVersion();
         const line = document.lineAt(position.line).text;
 
         // Inside an array literal the useful completions are the constructors.
@@ -100,6 +126,6 @@ export class ManifestCompletionProvider implements vscode.CompletionItemProvider
 
         // Only offer field declarations at the start of a line inside the class body.
         if (!/^\s*[A-Za-z\[\]]*$/.test(line.slice(0, position.character))) return [];
-        return FIELDS;
+        return makeFields(this.flyVer);
     }
 }

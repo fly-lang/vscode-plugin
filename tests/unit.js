@@ -38,7 +38,7 @@ t('single file compiles via --entry with its directory as import root', () => {
 // ── sanitizeCompilerJson ─────────────────────────────────────────────────────
 t('raw windows path in "file" becomes parseable JSON', () => {
     // The raw string below contains SINGLE backslashes — the exact broken
-    // output of compilers up to 0.14.4 (illegal JSON escapes like \U).
+    // output of older compilers (illegal JSON escapes like \U).
     const raw = '{"file":"C:\\Users\\m\\broken","message":"boom"}';
     const p = JSON.parse(sanitizeCompilerJson(raw));
     assert.strictEqual(p.file, 'C:\\Users\\m\\broken');

@@ -6,7 +6,7 @@ import * as path from 'path';
 export interface FlyInstallation {
     /** Absolute path to the fly binary. */
     path: string;
-    /** Version string, e.g. "0.14.4". */
+    /** Version string, MAJOR.MINOR.PATCH. */
     version: string;
 }
 
@@ -15,7 +15,7 @@ export function detectVersion(flyPath: string): Promise<string | undefined> {
     return new Promise(resolve => {
         cp.execFile(flyPath, ['--version'], { timeout: 5_000 }, (_err, stdout, stderr) => {
             const out = (stdout + stderr).trim();
-            // "fly version 0.14.4 (https://flylang.org)"
+            // Output shape: "fly version <MAJOR.MINOR.PATCH> (https://flylang.org)"
             const m = out.match(/(\d+\.\d+\.\d+)/);
             resolve(m ? m[1] : undefined);
         });

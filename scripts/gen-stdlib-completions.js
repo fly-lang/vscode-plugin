@@ -1,17 +1,24 @@
 #!/usr/bin/env node
 /**
- * Regenerates data/stdlib-completions.json from the Fly self-host std sources.
+ * Regenerates data/stdlib-completions.json from an INSTALLED Fly toolchain.
  *
- * Usage:  node scripts/gen-stdlib-completions.js [path-to-fly-repo]
+ * Usage:  node scripts/gen-stdlib-completions.js [path-to-fly-binary]
  *
- * The argument is the root of the fly_0.14.x checkout (default: ../fly_0.14.x
- * next to this extension's folder). The script scans std/lib/⁎⁎/⁎.fly plus
- * std/meta/Manifest.fly and extracts, per namespace:
+ * The toolchain is located exactly like the extension locates it: the argument,
+ * else $FLY, else the fly.compilerPath setting, else `fly` on PATH. From the
+ * binary it derives <install>/lib and reads the shipped `*.fly.h` headers —
+ * the public API the compiler links user code against — extracting per
+ * namespace:
  *   - public top-level functions (name, return type, params, signature)
  *   - public classes with their public methods
  *   - public structs with their fields
- * Output is deterministic: namespaces sorted, declarations in source order,
- * so re-running on the same sources yields an identical file.
+ *
+ * Reading the toolchain rather than a source checkout keeps the completions
+ * tied to the compiler the user actually builds with, and leaves no checkout
+ * path to go stale when the next release branch lands.
+ *
+ * Output is deterministic: namespaces sorted, declarations in source order, so
+ * re-running against the same toolchain yields an identical file.
  */
 'use strict';
 
@@ -19,30 +26,68 @@ const fs = require('fs');
 const path = require('path');
 
 const extRoot = path.resolve(__dirname, '..');
-const flyRepo = path.resolve(process.argv[2] || path.join(extRoot, '..', 'fly_0.14.x'));
-const stdLib = path.join(flyRepo, 'std', 'lib');
-const metaManifest = path.join(flyRepo, 'std', 'meta', 'Manifest.fly');
+
+// vsCodeSettingsPath — the user settings.json of the VS Code installation, where
+// fly.compilerPath lives.
+function vsCodeSettingsPath() {
+    const home = process.env.HOME || process.env.USERPROFILE || '';
+    if (process.platform === 'win32') {
+        return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'),
+                         'Code', 'User', 'settings.json');
+    }
+    if (process.platform === 'darwin') {
+        return path.join(home, 'Library', 'Application Support', 'Code', 'User', 'settings.json');
+    }
+    return path.join(home, '.config', 'Code', 'User', 'settings.json');
+}
+
+// compilerPathFromSettings — fly.compilerPath as the user configured it, or null.
+// Read with a regex rather than JSON.parse: settings.json is JSONC (comments and
+// trailing commas are legal there) and one setting is all this needs.
+function compilerPathFromSettings() {
+    try {
+        const raw = fs.readFileSync(vsCodeSettingsPath(), 'utf8');
+        const m = raw.match(/"fly\.compilerPath"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (!m) return null;
+        return JSON.parse(`"${m[1]}"`);      // undo the JSON string escaping
+    } catch {
+        return null;
+    }
+}
+
+// The toolchain to describe. Precedence: explicit argument, then $FLY, then the
+// extension's own fly.compilerPath setting, then PATH. Never a source checkout:
+// the completions describe the toolchain the user actually compiles with, and
+// its layout (<install>/bin/fly + <install>/lib) is the one the compiler itself
+// resolves at run time.
+const flyExe = process.argv[2] || process.env.FLY || compilerPathFromSettings() || 'fly';
+const binDir = path.dirname(path.resolve(flyExe));
+const libDir = path.join(path.dirname(binDir), 'lib');
 const outFile = path.join(extRoot, 'data', 'stdlib-completions.json');
 
-if (!fs.existsSync(stdLib)) {
-    console.error(`error: std/lib not found under "${flyRepo}" — pass the fly repo root as argument.`);
+if (!fs.existsSync(libDir)) {
+    console.error(`error: no lib/ directory next to the compiler "${flyExe}" (looked in `
+                + `"${libDir}").\nPass the fly binary as an argument, set $FLY, or configure `
+                + `fly.compilerPath in VS Code.`);
     process.exit(1);
 }
 
 // ── source collection ────────────────────────────────────────────────────────
+//
+// The shipped `.fly.h` headers ARE the public API: the compiler generates one
+// per module and links user code against exactly these declarations, so they
+// cannot drift from the toolchain the way a source checkout can.
 
-function collectFlyFiles(dir) {
-    const out = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) out.push(...collectFlyFiles(full));
-        else if (entry.name.endsWith('.fly')) out.push(full);
-    }
-    return out;
+const files = fs.readdirSync(libDir)
+    .filter(n => n.endsWith('.fly.h'))
+    .sort()
+    .map(n => path.join(libDir, n));
+
+if (files.length === 0) {
+    console.error(`error: no *.fly.h headers in "${libDir}".`);
+    process.exit(1);
 }
-
-const files = collectFlyFiles(stdLib);
-if (fs.existsSync(metaManifest)) files.push(metaManifest);
+console.log(`reading ${files.length} headers from ${libDir}`);
 
 // ── comment / string stripping ───────────────────────────────────────────────
 // Produces a structurally equivalent text where comments are blanked and
@@ -109,7 +154,10 @@ function logicalLines(text) {
 // ── declaration regexes ──────────────────────────────────────────────────────
 
 // public [ret[,ret…]] name[<T>] ( params ) {     — function or method header
-const FN_RE = /^\s*public\s+(?:((?:[\w.]+(?:<[^>()]*>)?(?:\[\])?)(?:\s*,\s*[\w.]+(?:<[^>()]*>)?(?:\[\])?)*)\s+)?([A-Za-z_]\w*)\s*(?:<[^>()]*>)?\s*\(([^)]*)\)\s*\{/;
+// Trailing `{` OPTIONAL: a header declares free functions with no body at all
+// (`public int len(const string src)`), while class members inside it still
+// carry one (`public void close() {}`).
+const FN_RE = /^\s*public\s+(?:((?:[\w.]+(?:<[^>()]*>)?(?:\[\])?)(?:\s*,\s*[\w.]+(?:<[^>()]*>)?(?:\[\])?)*)\s+)?([A-Za-z_]\w*)\s*(?:<[^>()]*>)?\s*\(([^)]*)\)\s*\{?\s*$/;
 const CLASS_RE = /^\s*public\s+(class|struct|interface)\s+([A-Za-z_]\w*)/;
 const NS_RE = /^\s*namespace\s+([\w.]+)/;
 // struct field:  [public] type name [= …]   (no parens on the line)
@@ -146,7 +194,14 @@ for (const file of files) {
 
     for (const line of lines) {
         const nsm = line.match(NS_RE);
-        if (nsm && !ns) { ns = nsm[1]; continue; }
+        if (nsm && !ns) {
+            // fly.llvm and fly.runtime are compiler intrinsics with special
+            // lowering; project convention never calls them from user code, so
+            // completing them would only invite mistakes.
+            if (nsm[1] === 'fly.llvm' || nsm[1] === 'fly.runtime') break;
+            ns = nsm[1];
+            continue;
+        }
 
         if (ns) {
             if (depth === 0) {

@@ -118,40 +118,7 @@
     "classes": [
       {
         "name": "CLang",
-        "methods": [
-          {
-            "name": "CLang",
-            "params": "const string libPath"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, int out"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, long out"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, float out"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, double out"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, bool out"
-          },
-          {
-            "name": "call",
-            "params": "string sym, const Args args, pointer out"
-          }
-        ]
+        "methods": []
       }
     ],
     "structs": [
@@ -1377,52 +1344,6 @@
       }
     ],
     "classes": [],
-    "structs": []
-  },
-  "fly.meta": {
-    "functions": [],
-    "classes": [
-      {
-        "name": "Dependency",
-        "methods": []
-      },
-      {
-        "name": "Target",
-        "methods": []
-      },
-      {
-        "name": "Profile",
-        "methods": []
-      },
-      {
-        "name": "TestConfig",
-        "methods": []
-      },
-      {
-        "name": "Registry",
-        "methods": []
-      },
-      {
-        "name": "Workspace",
-        "methods": []
-      },
-      {
-        "name": "Hooks",
-        "methods": []
-      },
-      {
-        "name": "Manifest",
-        "methods": []
-      },
-      {
-        "name": "LockedPackage",
-        "methods": []
-      },
-      {
-        "name": "Lockfile",
-        "methods": []
-      }
-    ],
     "structs": []
   },
   "fly.net": {
@@ -2862,79 +2783,19 @@
       },
       {
         "name": "FileReader",
-        "methods": [
-          {
-            "name": "read",
-            "params": "Buf buf, const ulong n"
-          },
-          {
-            "name": "close",
-            "params": ""
-          }
-        ]
+        "methods": []
       },
       {
         "name": "FileWriter",
-        "methods": [
-          {
-            "name": "write",
-            "params": "Buf buf, const ulong n"
-          },
-          {
-            "name": "flush",
-            "params": ""
-          },
-          {
-            "name": "close",
-            "params": ""
-          }
-        ]
+        "methods": []
       },
       {
         "name": "BufReader",
-        "methods": [
-          {
-            "name": "refill",
-            "params": ""
-          },
-          {
-            "name": "available",
-            "params": ""
-          },
-          {
-            "name": "bufAt",
-            "params": ""
-          },
-          {
-            "name": "takeByte",
-            "params": "byte b"
-          },
-          {
-            "name": "read",
-            "params": "Buf buf, const ulong n"
-          },
-          {
-            "name": "close",
-            "params": ""
-          }
-        ]
+        "methods": []
       },
       {
         "name": "BufWriter",
-        "methods": [
-          {
-            "name": "write",
-            "params": "Buf buf, const ulong n"
-          },
-          {
-            "name": "flush",
-            "params": ""
-          },
-          {
-            "name": "close",
-            "params": ""
-          }
-        ]
+        "methods": []
       }
     ],
     "structs": [

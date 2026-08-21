@@ -213,7 +213,8 @@ Open the folder in VS Code and press **F5**. This compiles the TypeScript and la
 There is no separate build step and no CMake target for it: `fly-lsp` is written
 in Fly and compiled by the Fly toolchain itself, so it comes out of the ordinary
 toolchain build. From a checkout of the [Fly compiler
-repository](https://github.com/fly-lang/fly), branch `release/0.14.X`:
+repository](https://github.com/fly-lang/fly), on the release branch matching
+your toolchain:
 
 ```bash
 ./ci/linux/stage0.sh && ./ci/linux/stage1.sh && ./ci/linux/stage2.sh
